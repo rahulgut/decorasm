@@ -1,0 +1,17 @@
+import mongoose, { Schema, model, models } from 'mongoose';
+
+const CartItemSchema = new Schema({
+  product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+  quantity: { type: Number, required: true, min: 1, default: 1 },
+});
+
+const CartSchema = new Schema(
+  {
+    sessionId: { type: String, required: true, unique: true },
+    items: [CartItemSchema],
+  },
+  { timestamps: true }
+);
+
+const Cart = models.Cart || model('Cart', CartSchema);
+export default Cart;
