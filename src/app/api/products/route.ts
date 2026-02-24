@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
+import { sanitizeRegex } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +11,19 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const category = searchParams.get('category');
     const sort = searchParams.get('sort') || 'createdAt';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+
+    const rawPage = parseInt(searchParams.get('page') || '1', 10);
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 20;
+
     const featured = searchParams.get('featured');
 
     const filter: Record<string, unknown> = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.name = { $regex: sanitizeRegex(search), $options: 'i' };
     }
 
     if (category) {
@@ -45,12 +51,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
     console.error('Products API error:', error);

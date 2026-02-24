@@ -30,10 +30,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-xs text-charcoal-400 uppercase tracking-wide mb-1">
             {capitalize(product.category)}
           </p>
-          <h3 className="font-medium text-charcoal-800 group-hover:text-brand-500 transition-colors line-clamp-1">
+          <h3 className="font-medium text-charcoal-800 group-hover:text-brand-700 transition-colors line-clamp-1">
             {product.name}
           </h3>
-          <p className="text-brand-600 font-semibold mt-1">{formatPrice(product.price)}</p>
+          <p className="text-brand-700 font-semibold mt-1">{formatPrice(product.price)}</p>
         </div>
       </div>
     </Link>

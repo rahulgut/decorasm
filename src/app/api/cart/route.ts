@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Cart from '@/lib/models/Cart';
+import Product from '@/lib/models/Product';
+
+function isValidObjectId(s: string): boolean {
+  return mongoose.Types.ObjectId.isValid(s) && /^[a-f\d]{24}$/i.test(s);
+}
+
+function isValidQuantity(q: unknown): q is number {
+  return typeof q === 'number' && Number.isInteger(q) && q >= 1 && q <= 100;
+}
 
 async function getSessionId(): Promise<string> {
   const cookieStore = await cookies();
@@ -17,8 +27,8 @@ function setSessionCookie(response: NextResponse, sessionId: string): NextRespon
   response.cookies.set('cart_session', sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    sameSite: 'strict',
+    maxAge: 60 * 60 * 24 * 30,
     path: '/',
   });
   return response;
@@ -41,7 +51,21 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const sessionId = await getSessionId();
-    const { productId, quantity = 1 } = await request.json();
+    const body = await request.json();
+    const { productId, quantity = 1 } = body;
+
+    if (!productId || !isValidObjectId(String(productId))) {
+      return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 });
+    }
+
+    if (!isValidQuantity(quantity)) {
+      return NextResponse.json({ error: 'Quantity must be an integer between 1 and 100' }, { status: 400 });
+    }
+
+    const product = await Product.findById(productId).lean();
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
 
     let cart = await Cart.findOne({ sessionId });
     if (!cart) {
@@ -54,7 +78,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (existingItem) {
-      existingItem.quantity += quantity;
+      existingItem.quantity = Math.min(existingItem.quantity + quantity, 100);
     } else {
       cart.items.push({ product: productId, quantity });
     }
@@ -73,7 +97,16 @@ export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
     const sessionId = await getSessionId();
-    const { productId, quantity } = await request.json();
+    const body = await request.json();
+    const { productId, quantity } = body;
+
+    if (!productId || !isValidObjectId(String(productId))) {
+      return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 });
+    }
+
+    if (quantity !== 0 && !isValidQuantity(quantity)) {
+      return NextResponse.json({ error: 'Quantity must be an integer between 1 and 100' }, { status: 400 });
+    }
 
     const cart = await Cart.findOne({ sessionId });
     if (!cart) {
@@ -118,7 +151,13 @@ export async function DELETE(request: NextRequest) {
       return setSessionCookie(response, sessionId);
     }
 
-    const { productId } = await request.json();
+    const body = await request.json();
+    const { productId } = body;
+
+    if (!productId || !isValidObjectId(String(productId))) {
+      return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 });
+    }
+
     const cart = await Cart.findOne({ sessionId });
 
     if (cart) {

@@ -1,9 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
 import { seedProducts } from '@/lib/seed-data';
 
-export async function POST() {
+const SEED_SECRET = process.env.SEED_SECRET || '';
+
+export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const authHeader = request.headers.get('authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (SEED_SECRET && token !== SEED_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     await dbConnect();
     await Product.deleteMany({});

@@ -32,7 +32,7 @@ export default function CartItem({ item }: CartItemProps) {
       {/* Details */}
       <div className="flex-1 min-w-0">
         <Link href={`/products/${product.slug}`}>
-          <h3 className="font-medium text-charcoal-800 hover:text-brand-500 transition-colors truncate">
+          <h3 className="font-medium text-charcoal-800 hover:text-brand-700 transition-colors truncate">
             {product.name}
           </h3>
         </Link>
@@ -40,21 +40,32 @@ export default function CartItem({ item }: CartItemProps) {
 
         {/* Quantity stepper */}
         <div className="flex items-center gap-3 mt-3">
-          <div className="flex items-center border border-charcoal-200 rounded-lg">
+          <div
+            role="group"
+            aria-label={`Quantity for ${product.name}`}
+            className="flex items-center border border-charcoal-200 rounded-lg"
+          >
             <button
-              className="px-2.5 py-1 text-charcoal-500 hover:text-charcoal-800 transition-colors text-sm"
+              aria-label={`Decrease quantity of ${product.name}`}
+              className="px-2.5 py-1 text-charcoal-500 hover:text-charcoal-800 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-700"
               onClick={() => updateQuantity(product._id, quantity - 1)}
             >
-              -
+              <span aria-hidden="true">-</span>
             </button>
-            <span className="px-3 py-1 text-sm text-charcoal-800 font-medium min-w-[2.5rem] text-center">
+            <span
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={`Quantity: ${quantity}`}
+              className="px-3 py-1 text-sm text-charcoal-800 font-medium min-w-[2.5rem] text-center"
+            >
               {quantity}
             </span>
             <button
-              className="px-2.5 py-1 text-charcoal-500 hover:text-charcoal-800 transition-colors text-sm"
+              aria-label={`Increase quantity of ${product.name}`}
+              className="px-2.5 py-1 text-charcoal-500 hover:text-charcoal-800 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-700"
               onClick={() => updateQuantity(product._id, quantity + 1)}
             >
-              +
+              <span aria-hidden="true">+</span>
             </button>
           </div>
           <button

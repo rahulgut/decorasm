@@ -8,3 +8,7 @@ export function formatPrice(cents: number): string {
 export function capitalize(str: string): string {
   return str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+export function sanitizeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
