@@ -7,7 +7,9 @@ import Button from '@/components/ui/Button';
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
-  const orderNumber = searchParams.get('order');
+  const rawOrder = searchParams.get('order');
+  const ORDER_NUMBER_RE = /^DEC-[A-Z0-9]+-[A-F0-9]{8}$/;
+  const orderNumber = rawOrder && ORDER_NUMBER_RE.test(rawOrder) ? rawOrder : null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">

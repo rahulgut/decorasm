@@ -1,6 +1,7 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import Link from 'next/link';
+import Image from 'next/image';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
 import { IProduct } from '@/types';
@@ -9,28 +10,31 @@ import Button from '@/components/ui/Button';
 import { capitalize } from '@/lib/utils';
 
 const categoryHighlights = [
-  { name: 'furniture', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80', description: 'Statement pieces for every room' },
-  { name: 'lighting', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=600&q=80', description: 'Set the perfect ambiance' },
-  { name: 'wall-art', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80', description: 'Express your personal style' },
-  { name: 'textiles', image: 'https://images.unsplash.com/photo-1600166898405-da9535204843?w=600&q=80', description: 'Comfort meets elegance' },
-  { name: 'accessories', image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=600&q=80', description: 'The finishing touches' },
+  { name: 'furniture', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc', description: 'Statement pieces for every room' },
+  { name: 'lighting', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe', description: 'Set the perfect ambiance' },
+  { name: 'wall-art', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262', description: 'Express your personal style' },
+  { name: 'textiles', image: 'https://images.unsplash.com/photo-1600166898405-da9535204843', description: 'Comfort meets elegance' },
+  { name: 'accessories', image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d', description: 'The finishing touches' },
 ];
 
 export default async function HomePage() {
   await dbConnect();
-  const featuredProducts = (await Product.find({ featured: true }).limit(8).lean()) as unknown as IProduct[];
+  const featuredProducts = (await Product.find({ featured: true }, {
+    name: 1, slug: 1, price: 1, category: 1, images: { $slice: 1 }, featured: 1, inStock: 1,
+  }).limit(8).lean()) as unknown as IProduct[];
 
   return (
     <div>
       {/* Hero */}
       <section className="relative bg-charcoal-800 text-white overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1600&q=80)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
+        <Image
+          src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace"
+          alt=""
+          fill
+          priority
+          quality={75}
+          className="object-cover object-center opacity-30"
+          sizes="100vw"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <div className="max-w-2xl">
@@ -64,11 +68,15 @@ export default async function HomePage() {
             <Link
               key={cat.name}
               href={`/products?category=${cat.name}`}
+              aria-label={`Shop ${capitalize(cat.name)} — ${cat.description}`}
               className="group relative aspect-[3/4] rounded-xl overflow-hidden"
             >
-              <div
-                className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-300"
-                style={{ backgroundImage: `url(${cat.image})` }}
+              <Image
+                src={cat.image}
+                alt={`${capitalize(cat.name)} home decor collection`}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -88,7 +96,7 @@ export default async function HomePage() {
               <h2 className="text-2xl md:text-3xl font-bold text-charcoal-800">Featured Pieces</h2>
               <p className="text-charcoal-400 mt-1">Hand-picked for you</p>
             </div>
-            <Link href="/products" className="text-brand-500 hover:text-brand-600 font-medium text-sm">
+            <Link href="/products" className="text-brand-700 hover:text-brand-800 font-medium text-sm">
               View all &rarr;
             </Link>
           </div>
@@ -98,7 +106,7 @@ export default async function HomePage() {
 
       {/* CTA Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-brand-500 rounded-2xl p-8 md:p-12 text-center text-white">
+        <div className="bg-brand-700 rounded-2xl p-8 md:p-12 text-center text-white">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Free Shipping on Orders Over $100</h2>
           <p className="text-brand-100 mb-6 max-w-lg mx-auto">
             Elevate your home without worrying about delivery costs. Shop our curated collection today.

@@ -1,9 +1,8 @@
-export const dynamic = 'force-dynamic';
-
 import { Suspense } from 'react';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
 import { IProduct } from '@/types';
+import { sanitizeRegex } from '@/lib/utils';
 import ProductGrid from '@/components/products/ProductGrid';
 import CategoryPills from '@/components/products/CategoryPills';
 import SearchBar from '@/components/products/SearchBar';
@@ -18,7 +17,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   const filter: Record<string, unknown> = {};
   if (params.search) {
-    filter.name = { $regex: params.search, $options: 'i' };
+    filter.name = { $regex: sanitizeRegex(params.search), $options: 'i' };
   }
   if (params.category) {
     filter.category = params.category;
