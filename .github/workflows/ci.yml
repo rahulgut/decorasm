@@ -141,8 +141,8 @@ jobs:
   # Playwright starts its own dev server, so no
   # build artifact needed — just needs MongoDB.
   # ──────────────────────────────────────────────
-  e2e:
-    name: E2E Tests (Chromium)
+  e2e-tests:
+    name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [build]
@@ -217,7 +217,7 @@ jobs:
     name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [e2e]
+    needs: [e2e-tests]
 
     services:
       mongodb:
