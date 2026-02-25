@@ -104,6 +104,7 @@ jobs:
         with:
           name: nextjs-build
           path: .next/
+          include-hidden-files: true
           retention-days: 1
 
   # ──────────────────────────────────────────────
@@ -306,17 +307,11 @@ jobs:
           name: nextjs-build
           path: .next/
 
-      - name: Seed database
+      - name: Seed database and run Lighthouse CI
         run: |
           npm run start &
           npx wait-on http://localhost:3000 --timeout 30000
           curl -X POST http://localhost:3000/api/seed
-          kill %1 || true
-
-      - name: Run Lighthouse CI
-        run: |
-          npm run start &
-          npx wait-on http://localhost:3000 --timeout 30000
           npm run lighthouse
         env:
           MONGODB_URI: ${{ env.MONGODB_URI }}
@@ -344,21 +339,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build with bundle analyzer
-        run: npm run build
-        env:
-          ANALYZE: "true"
-          MONGODB_URI: mongodb://localhost:27017/decorasm
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next/
 
       - name: Report bundle info
         run: |
           echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Page Chunks" >> $GITHUB_STEP_SUMMARY
-          find .next/static/chunks -name '*.js' | wc -l | xargs -I{} echo "Total JS chunks: {}" >> $GITHUB_STEP_SUMMARY
+          find .next/static/chunks -name '*.js' 2>/dev/null | wc -l | xargs -I{} echo "Total JS chunks: {}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Static Assets" >> $GITHUB_STEP_SUMMARY
-          du -sh .next/static/ | awk '{print "Total static size: " $1}' >> $GITHUB_STEP_SUMMARY
+          du -sh .next/static/ 2>/dev/null | awk '{print "Total static size: " $1}' >> $GITHUB_STEP_SUMMARY || echo "No static directory found" >> $GITHUB_STEP_SUMMARY
 
   # ──────────────────────────────────────────────
   # Job 8 – Security Audit (informational)
