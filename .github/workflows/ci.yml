@@ -63,12 +63,41 @@ jobs:
         run: npx tsc --noEmit
 
   # ──────────────────────────────────────────────
-  # Job 3 – Build
+  # Job 3 – Security Audit (informational)
+  # ──────────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "## Security Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          npm audit --audit-level=high >> $GITHUB_STEP_SUMMARY 2>&1 || true
+
+  # ──────────────────────────────────────────────
+  # Job 4 – Build (needs lint + type-check)
   # ──────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [lint, type-check]
 
     services:
       mongodb:
@@ -108,13 +137,13 @@ jobs:
           retention-days: 1
 
   # ──────────────────────────────────────────────
-  # Job 4 – E2E Tests (Playwright + MongoDB)
+  # Job 5 – E2E Tests (needs build)
   # ──────────────────────────────────────────────
   e2e:
     name: E2E Tests (Chromium)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [lint, type-check, build]
+    needs: [build]
 
     services:
       mongodb:
@@ -143,7 +172,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Cache Playwright browser binaries keyed on the Playwright version.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -188,13 +216,13 @@ jobs:
           retention-days: 7
 
   # ──────────────────────────────────────────────
-  # Job 5 – Visual Regression Tests
+  # Job 6 – Visual Regression (needs e2e)
   # ──────────────────────────────────────────────
   visual:
     name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build]
+    needs: [e2e]
 
     services:
       mongodb:
@@ -281,13 +309,13 @@ jobs:
           retention-days: 7
 
   # ──────────────────────────────────────────────
-  # Job 6 – Lighthouse CI (informational)
+  # Job 7 – Lighthouse CI (needs visual)
   # ──────────────────────────────────────────────
   lighthouse:
     name: Lighthouse CI
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build]
+    needs: [visual]
     continue-on-error: true
 
     services:
@@ -333,13 +361,13 @@ jobs:
           MONGODB_URI: ${{ env.MONGODB_URI }}
 
   # ──────────────────────────────────────────────
-  # Job 7 – Bundle Size Report (informational)
+  # Job 8 – Bundle Size Report (needs lighthouse)
   # ──────────────────────────────────────────────
   bundle-size:
     name: Bundle Size Report
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build]
+    needs: [lighthouse]
     continue-on-error: true
 
     steps:
@@ -370,31 +398,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Static Assets" >> $GITHUB_STEP_SUMMARY
           du -sh .next/static/ 2>/dev/null | awk '{print "Total static size: " $1}' >> $GITHUB_STEP_SUMMARY || echo "No static directory found" >> $GITHUB_STEP_SUMMARY
-
-  # ──────────────────────────────────────────────
-  # Job 8 – Security Audit (informational)
-  # ──────────────────────────────────────────────
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    continue-on-error: true
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: |
-          echo "## Security Audit Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          npm audit --audit-level=high >> $GITHUB_STEP_SUMMARY 2>&1 || true
