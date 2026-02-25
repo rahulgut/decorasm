@@ -146,21 +146,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
       MONGODB_URI: mongodb://localhost:27017/decorasm
 
     steps:
+      - name: Start MongoDB
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:7
+          until docker exec mongo mongosh --quiet --eval 'db.runCommand({ ping: 1 })' 2>/dev/null; do
+            sleep 2
+          done
+
       - name: Checkout code
         uses: actions/checkout@v4
 
