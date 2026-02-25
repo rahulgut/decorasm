@@ -97,7 +97,6 @@ jobs:
     name: Build & E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [lint, type-check]
 
     services:
       mongodb:
@@ -128,14 +127,6 @@ jobs:
 
       - name: Build Next.js app
         run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
-          include-hidden-files: true
-          retention-days: 1
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -180,7 +171,6 @@ jobs:
     name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build-and-e2e]
 
     services:
       mongodb:
@@ -224,11 +214,8 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
+      - name: Build Next.js app
+        run: npm run build
 
       - name: Seed database
         run: |
@@ -273,7 +260,6 @@ jobs:
     name: Lighthouse CI
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [visual]
     continue-on-error: true
 
     services:
@@ -303,11 +289,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
+      - name: Build Next.js app
+        run: npm run build
 
       - name: Seed database and run Lighthouse CI
         run: |
@@ -325,8 +308,21 @@ jobs:
     name: Bundle Size Report
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lighthouse]
     continue-on-error: true
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MONGODB_URI: mongodb://localhost:27017/decorasm
 
     steps:
       - name: Checkout code
@@ -341,11 +337,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
+      - name: Build Next.js app
+        run: npm run build
 
       - name: Report bundle info
         run: |
