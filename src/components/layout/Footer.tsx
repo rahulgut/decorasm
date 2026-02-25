@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Logo from '../ui/Logo';
 
 export default function Footer() {
   return (
@@ -7,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <h3 className="font-heading text-xl font-bold text-white mb-3">Decorasm</h3>
+            <Logo variant="light" className="h-7 w-auto mb-3" />
             <p className="text-sm text-charcoal-300 leading-relaxed">
               Curated home decor that brings warmth and elegance to every space.
             </p>

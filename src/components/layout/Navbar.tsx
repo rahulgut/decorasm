@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import CartIcon from '../cart/CartIcon';
 import MobileMenu from './MobileMenu';
+import Logo from '../ui/Logo';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -23,8 +24,8 @@ export default function Navbar() {
       <nav aria-label="Main navigation" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="font-heading text-2xl font-bold text-brand-700 tracking-wide">
-            Decorasm
+          <Link href="/" className="flex-shrink-0">
+            <Logo className="h-8 w-auto" />
           </Link>
 
           {/* Desktop Links */}

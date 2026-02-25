@@ -193,7 +193,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {product.inStock && (
-              <AddToCartButton productId={product._id} />
+              <AddToCartButton productId={product._id.toString()} />
             )}
 
             {/* Shipping info */}

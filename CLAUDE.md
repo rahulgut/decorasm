@@ -5,12 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (localhost:3000)
-npm run build        # Production build
-npm run lint         # ESLint
-npx playwright test --project=chromium              # Run all e2e tests
-npx playwright test tests/e2e/homepage.spec.ts      # Run a single test file
-npx playwright test --headed --project=chromium     # Run tests with browser UI
+npm run dev              # Start dev server (localhost:3000)
+npm run build            # Production build
+npm run lint             # ESLint
+npm run type-check       # TypeScript type check
+npm run test             # Run all e2e tests (chromium)
+npm run test:e2e         # Alias for test
+npm run test:visual      # Visual regression tests
+npm run test:visual:update  # Update visual baselines
+npm run test:headed      # Run e2e tests with browser UI
+npm run lighthouse       # Run Lighthouse CI
+npm run analyze          # Build with bundle analyzer (opens report)
 ```
 
 Seed the database: `curl -X POST http://localhost:3000/api/seed` (dev server must be running).
@@ -44,3 +49,9 @@ Brand palette: warm gold `#a68b5b` on cream `#fffdf9`. Fonts: Playfair Display (
 ## Testing
 
 E2e tests use Playwright in `tests/e2e/`. Playwright config auto-starts the dev server. Tests require a running MongoDB instance. Default project is `chromium`.
+
+Visual regression tests live in `tests/visual/` with a separate config (`playwright.visual.config.ts`). Update baselines with `npm run test:visual:update`.
+
+**Git hooks:** Husky runs lint-staged on pre-commit (ESLint --fix on staged `.ts/.tsx/.js/.jsx` files).
+
+**CI/CD:** GitHub Actions runs 8 jobs on push/PR to main: lint, type-check, build, e2e, visual regression (blocking); security audit, Lighthouse CI, bundle size report (informational).
