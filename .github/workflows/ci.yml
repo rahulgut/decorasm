@@ -251,7 +251,23 @@ jobs:
           curl -X POST http://localhost:3000/api/seed
           kill %1 || true
 
+      - name: Check for existing baselines
+        id: baselines
+        run: |
+          if find tests/visual -name '*.png' 2>/dev/null | grep -q .; then
+            echo "exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate baselines (first run)
+        if: steps.baselines.outputs.exist == 'false'
+        run: npm run test:visual:update
+        env:
+          CI: true
+
       - name: Run visual regression tests
+        if: steps.baselines.outputs.exist == 'true'
         run: npm run test:visual
         env:
           CI: true
