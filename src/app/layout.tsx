@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     'home decor', 'furniture', 'lighting', 'wall art',
     'textiles', 'accessories', 'curated home decor', 'interior design',
   ],
+  icons: {
+    icon: '/favicon.svg',
+  },
   robots: {
     index: true,
     follow: true,

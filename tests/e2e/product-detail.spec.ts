@@ -182,10 +182,10 @@ test.describe('Product Detail Page', () => {
       const addButton = page.getByRole('button', { name: 'Add to Cart' });
 
       // Intercept the POST /api/cart request and delay it
-      let resolveRoute: (() => void) | null = null;
+      const pending: { resolve: (() => void) | null } = { resolve: null };
       await page.route('**/api/cart', async (route) => {
         if (route.request().method() === 'POST') {
-          await new Promise<void>((resolve) => { resolveRoute = resolve; });
+          await new Promise<void>((resolve) => { pending.resolve = resolve; });
           await route.continue();
         } else {
           await route.continue();
@@ -201,7 +201,7 @@ test.describe('Product Detail Page', () => {
       ).toBeVisible({ timeout: 2000 });
 
       // Release the route
-      resolveRoute?.();
+      pending.resolve?.();
 
       // Clean up
       await page.unrouteAll({ behavior: 'ignoreErrors' });

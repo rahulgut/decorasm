@@ -63,12 +63,13 @@ jobs:
         run: npx tsc --noEmit
 
   # ──────────────────────────────────────────────
-  # Job 3 – Build
+  # Job 3 – Security Audit (informational)
   # ──────────────────────────────────────────────
-  build:
-    name: Build
+  security:
+    name: Security Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -83,28 +84,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Next.js app
-        run: npm run build
-        env:
-          # Provide a placeholder URI so the build can resolve env references.
-          # No real connection is made during build time.
-          MONGODB_URI: ${{ secrets.MONGODB_URI || 'mongodb://localhost:27017/decorasm' }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
-          retention-days: 1
+      - name: Run npm audit
+        run: |
+          echo "## Security Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          npm audit --audit-level=high >> $GITHUB_STEP_SUMMARY 2>&1 || true
 
   # ──────────────────────────────────────────────
-  # Job 4 – E2E Tests (Playwright + MongoDB)
+  # Job 4 – Build + E2E Tests
   # ──────────────────────────────────────────────
-  e2e:
-    name: E2E Tests (Chromium)
+  build-and-e2e:
+    name: Build & E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [lint, type-check, build]
+    needs: [lint, type-check]
 
     services:
       mongodb:
@@ -133,7 +126,89 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Cache Playwright browser binaries keyed on the Playwright version.
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next/
+          include-hidden-files: true
+          retention-days: 1
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright system dependencies (cached hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run Playwright e2e tests (Chromium)
+        run: npx playwright test --project=chromium
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────
+  # Job 6 – Visual Regression (needs e2e)
+  # ──────────────────────────────────────────────
+  visual:
+    name: Visual Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build-and-e2e]
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MONGODB_URI: mongodb://localhost:27017/decorasm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -155,24 +230,129 @@ jobs:
           name: nextjs-build
           path: .next/
 
-      - name: Run Playwright e2e tests (Chromium)
-        run: npx playwright test --project=chromium
+      - name: Seed database
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 --timeout 30000
+          curl -X POST http://localhost:3000/api/seed
+          kill %1 || true
+
+      - name: Check for existing baselines
+        id: baselines
+        run: |
+          if find tests/visual -name '*.png' 2>/dev/null | grep -q .; then
+            echo "exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate baselines (first run)
+        if: steps.baselines.outputs.exist == 'false'
+        run: npm run test:visual:update
         env:
           CI: true
-          MONGODB_URI: ${{ env.MONGODB_URI }}
 
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+      - name: Run visual regression tests
+        if: steps.baselines.outputs.exist == 'true'
+        run: npm run test:visual
+        env:
+          CI: true
 
-      - name: Upload Playwright test results
+      - name: Upload visual diff artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-test-results
+          name: visual-diff
           path: test-results/
           retention-days: 7
+
+  # ──────────────────────────────────────────────
+  # Job 7 – Lighthouse CI (needs visual)
+  # ──────────────────────────────────────────────
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [visual]
+    continue-on-error: true
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MONGODB_URI: mongodb://localhost:27017/decorasm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next/
+
+      - name: Seed database and run Lighthouse CI
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 --timeout 30000
+          curl -X POST http://localhost:3000/api/seed
+          npm run lighthouse
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+
+  # ──────────────────────────────────────────────
+  # Job 8 – Bundle Size Report (needs lighthouse)
+  # ──────────────────────────────────────────────
+  bundle-size:
+    name: Bundle Size Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lighthouse]
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next/
+
+      - name: Report bundle info
+        run: |
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Page Chunks" >> $GITHUB_STEP_SUMMARY
+          find .next/static/chunks -name '*.js' 2>/dev/null | wc -l | xargs -I{} echo "Total JS chunks: {}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Static Assets" >> $GITHUB_STEP_SUMMARY
+          du -sh .next/static/ 2>/dev/null | awk '{print "Total static size: " $1}' >> $GITHUB_STEP_SUMMARY || echo "No static directory found" >> $GITHUB_STEP_SUMMARY
