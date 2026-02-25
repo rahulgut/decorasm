@@ -91,12 +91,12 @@ jobs:
           npm audit --audit-level=high >> $GITHUB_STEP_SUMMARY 2>&1 || true
 
   # ──────────────────────────────────────────────
-  # Job 4 – Build (needs lint + type-check)
+  # Job 4 – Build + E2E Tests
   # ──────────────────────────────────────────────
-  build:
-    name: Build
+  build-and-e2e:
+    name: Build & E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: [lint, type-check]
 
     services:
@@ -109,6 +109,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+    env:
+      MONGODB_URI: mongodb://localhost:27017/decorasm
 
     steps:
       - name: Checkout code
@@ -125,8 +128,6 @@ jobs:
 
       - name: Build Next.js app
         run: npm run build
-        env:
-          MONGODB_URI: mongodb://localhost:27017/decorasm
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -135,39 +136,6 @@ jobs:
           path: .next/
           include-hidden-files: true
           retention-days: 1
-
-  # ──────────────────────────────────────────────
-  # Job 5 – E2E Tests (needs build)
-  # Playwright starts its own dev server, so no
-  # build artifact needed — just needs MongoDB.
-  # ──────────────────────────────────────────────
-  e2e-tests:
-    name: Playwright E2E
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    env:
-      MONGODB_URI: mongodb://localhost:27017/decorasm
-
-    steps:
-      - name: Start MongoDB
-        run: |
-          docker run -d --name mongo -p 27017:27017 mongo:7
-          until docker exec mongo mongosh --quiet --eval 'db.runCommand({ ping: 1 })' 2>/dev/null; do
-            sleep 2
-          done
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -212,7 +180,7 @@ jobs:
     name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build]
+    needs: [build-and-e2e]
 
     services:
       mongodb:
