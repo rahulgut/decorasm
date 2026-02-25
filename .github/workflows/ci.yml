@@ -145,7 +145,6 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build]
 
     services:
       mongodb:
@@ -217,7 +216,7 @@ jobs:
     name: Visual Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [e2e-tests]
+    needs: [build]
 
     services:
       mongodb:
