@@ -138,6 +138,8 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Job 5 – E2E Tests (needs build)
+  # Playwright starts its own dev server, so no
+  # build artifact needed — just needs MongoDB.
   # ──────────────────────────────────────────────
   e2e:
     name: E2E Tests (Chromium)
@@ -187,17 +189,10 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
-
       - name: Run Playwright e2e tests (Chromium)
         run: npx playwright test --project=chromium
         env:
           CI: true
-          MONGODB_URI: ${{ env.MONGODB_URI }}
 
       - name: Upload Playwright report
         if: always()
