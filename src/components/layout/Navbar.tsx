@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import CartIcon from '../cart/CartIcon';
+import WishlistIcon from './WishlistIcon';
 import MobileMenu from './MobileMenu';
 import Logo from '../ui/Logo';
 
@@ -68,6 +69,7 @@ export default function Navbar() {
           {/* Cart + Auth + Mobile Toggle */}
           <div className="flex items-center space-x-4">
             <CartIcon />
+            {session?.user && <WishlistIcon />}
 
             {session?.user ? (
               <div className="relative hidden md:block" ref={dropdownRef}>

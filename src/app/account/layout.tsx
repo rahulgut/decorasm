@@ -7,6 +7,7 @@ import { ReactNode } from 'react';
 const sidebarLinks = [
   { href: '/account', label: 'Dashboard' },
   { href: '/account/orders', label: 'Order History' },
+  { href: '/account/wishlist', label: 'Wishlist' },
 ];
 
 export default function AccountLayout({ children }: { children: ReactNode }) {

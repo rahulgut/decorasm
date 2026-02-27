@@ -7,6 +7,7 @@ import Product from '@/lib/models/Product';
 import { IProduct } from '@/types';
 import { formatPrice, capitalize } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
+import WishlistButton from '@/components/products/WishlistButton';
 import Badge from '@/components/ui/Badge';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://decorasm.com';
@@ -192,9 +193,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             </div>
 
-            {product.inStock && (
-              <AddToCartButton productId={product._id.toString()} />
-            )}
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                {product.inStock && (
+                  <AddToCartButton productId={product._id.toString()} />
+                )}
+              </div>
+              <WishlistButton
+                productId={product._id.toString()}
+                className="mt-2 shadow-sm border border-charcoal-100"
+              />
+            </div>
 
             {/* Shipping info */}
             <div className="mt-8 bg-cream-100 rounded-lg p-4 space-y-2">
