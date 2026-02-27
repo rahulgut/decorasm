@@ -51,7 +51,7 @@ export const seedProducts = [
     price: 22900,
     category: 'lighting',
     images: [
-      'https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=800&q=80',
+      'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=800&q=80',
     ],
     dimensions: '12" diameter x 14"H',
     material: 'Solid brass, frosted glass',
@@ -208,7 +208,7 @@ export const seedProducts = [
     price: 4500,
     category: 'accessories',
     images: [
-      'https://images.unsplash.com/photo-1602607742536-ee15c39e79a5?w=800&q=80',
+      'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&q=80',
     ],
     dimensions: '3" diameter x 4"H each',
     material: '100% soy wax, cotton wick',

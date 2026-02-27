@@ -271,9 +271,9 @@ test.describe('Checkout page (/checkout)', () => {
 
       await fillShippingForm(page);
 
-      let resolveRoute: (() => void) | null = null;
+      const pending: { resolve: (() => void) | null } = { resolve: null };
       await page.route('**/api/orders', async (route) => {
-        await new Promise<void>((resolve) => { resolveRoute = resolve; });
+        await new Promise<void>((resolve) => { pending.resolve = resolve; });
         await route.continue();
       });
 
@@ -282,7 +282,7 @@ test.describe('Checkout page (/checkout)', () => {
         page.getByRole('button', { name: 'Placing Order...' })
       ).toBeVisible({ timeout: 3000 });
 
-      resolveRoute?.();
+      pending.resolve?.();
       await page.unrouteAll({ behavior: 'ignoreErrors' });
     });
   });

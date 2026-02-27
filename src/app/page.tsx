@@ -11,7 +11,7 @@ import { capitalize } from '@/lib/utils';
 
 const categoryHighlights = [
   { name: 'furniture', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc', description: 'Statement pieces for every room' },
-  { name: 'lighting', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe', description: 'Set the perfect ambiance' },
+  { name: 'lighting', image: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f', description: 'Set the perfect ambiance' },
   { name: 'wall-art', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262', description: 'Express your personal style' },
   { name: 'textiles', image: 'https://images.unsplash.com/photo-1600166898405-da9535204843', description: 'Comfort meets elegance' },
   { name: 'accessories', image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d', description: 'The finishing touches' },

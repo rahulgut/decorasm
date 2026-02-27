@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, Types } from 'mongoose';
 
 const OrderItemSchema = new Schema({
   productId: { type: String, required: true },
@@ -23,6 +23,7 @@ const ShippingAddressSchema = new Schema({
 const OrderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, unique: true },
+    userId: { type: Types.ObjectId, ref: 'User', default: null },
     items: [OrderItemSchema],
     subtotal: { type: Number, required: true },
     shipping: { type: Number, required: true, default: 0 },
@@ -36,6 +37,8 @@ const OrderSchema = new Schema(
   },
   { timestamps: true }
 );
+
+OrderSchema.index({ userId: 1, createdAt: -1 });
 
 const Order = models.Order || model('Order', OrderSchema);
 export default Order;
