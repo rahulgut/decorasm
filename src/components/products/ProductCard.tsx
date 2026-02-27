@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { IProduct } from '@/types';
 import { formatPrice, capitalize } from '@/lib/utils';
 import Badge from '../ui/Badge';
+import WishlistButton from './WishlistButton';
 
 interface ProductCardProps {
   product: IProduct;
@@ -25,6 +26,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               <Badge variant="brand">Featured</Badge>
             </div>
           )}
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <WishlistButton productId={product._id} />
+          </div>
         </div>
         <div className="p-4">
           <p className="text-xs text-charcoal-400 uppercase tracking-wide mb-1">
