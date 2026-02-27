@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import dbConnect from '@/lib/mongodb';
 import Cart from '@/lib/models/Cart';
 import Order from '@/lib/models/Order';
+import User from '@/lib/models/User';
+import { auth } from '@/lib/auth';
 
 function generateOrderNumber(): string {
   const random = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -62,8 +64,16 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('cart_session')?.value;
+    const session = await auth();
+    const userId = session?.user?.id || null;
+
+    let sessionId: string | undefined;
+    if (userId) {
+      sessionId = `user:${userId}`;
+    } else {
+      const cookieStore = await cookies();
+      sessionId = cookieStore.get('cart_session')?.value;
+    }
 
     if (!sessionId) {
       return NextResponse.json({ error: 'No active cart session' }, { status: 400 });
@@ -128,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     const order = await Order.create({
       orderNumber: generateOrderNumber(),
+      userId,
       items,
       subtotal,
       shipping,
@@ -135,6 +146,11 @@ export async function POST(request: NextRequest) {
       shippingAddress,
       status: 'confirmed',
     });
+
+    // Save shipping address to user profile
+    if (userId) {
+      await User.findByIdAndUpdate(userId, { shippingAddress });
+    }
 
     await Cart.deleteOne({ sessionId });
 

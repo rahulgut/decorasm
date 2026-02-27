@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import CartIcon from '../cart/CartIcon';
 import MobileMenu from './MobileMenu';
 import Logo from '../ui/Logo';
@@ -17,7 +18,20 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-cream-50/95 backdrop-blur-sm border-b border-charcoal-100">
@@ -51,9 +65,57 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Cart + Mobile Toggle */}
+          {/* Cart + Auth + Mobile Toggle */}
           <div className="flex items-center space-x-4">
             <CartIcon />
+
+            {session?.user ? (
+              <div className="relative hidden md:block" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center space-x-1 text-sm font-medium text-charcoal-600 hover:text-brand-700 transition-colors"
+                  aria-expanded={dropdownOpen}
+                  aria-haspopup="true"
+                >
+                  <span>{session.user.name || 'Account'}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-charcoal-100 rounded-lg shadow-lg py-1 z-50">
+                    <Link
+                      href="/account"
+                      className="block px-4 py-2 text-sm text-charcoal-700 hover:bg-cream-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      My Account
+                    </Link>
+                    <Link
+                      href="/account/orders"
+                      className="block px-4 py-2 text-sm text-charcoal-700 hover:bg-cream-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Order History
+                    </Link>
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="block w-full text-left px-4 py-2 text-sm text-charcoal-700 hover:bg-cream-100"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden md:inline-flex text-sm font-medium text-charcoal-600 hover:text-brand-700 transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
+
             <button
               className="md:hidden p-2 text-charcoal-600 hover:text-brand-700"
               onClick={() => setMobileOpen(true)}

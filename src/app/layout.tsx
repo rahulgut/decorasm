@@ -3,7 +3,7 @@ import { Playfair_Display, Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { CartProvider } from '@/hooks/useCart';
+import Providers from '@/components/providers/Providers';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -119,7 +119,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased">
-        <CartProvider>
+        <Providers>
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-charcoal-800 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium focus:shadow-lg"
@@ -129,7 +129,7 @@ export default function RootLayout({
           <Navbar />
           <main id="main-content" className="flex-1">{children}</main>
           <Footer />
-        </CartProvider>
+        </Providers>
       </body>
     </html>
   );

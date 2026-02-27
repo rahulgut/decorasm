@@ -55,3 +55,15 @@ Visual regression tests live in `tests/visual/` with a separate config (`playwri
 **Git hooks:** Husky runs lint-staged on pre-commit (ESLint --fix on staged `.ts/.tsx/.js/.jsx` files).
 
 **CI/CD:** GitHub Actions runs 8 jobs on push/PR to main: lint, type-check, build, e2e, visual regression (blocking); security audit, Lighthouse CI, bundle size report (informational).
+
+## Jira Integration
+
+Project key: `SCRUM` on [rahul-dhawan.atlassian.net](https://rahul-dhawan.atlassian.net). Board ID: `1`.
+
+**Slash command:** Use `/jira` to manage sprints and stories from Claude Code. Examples:
+- `/jira status` — view active sprint board
+- `/jira create story "Title" --epic SCRUM-1 --points 3` — create a story
+- `/jira start SCRUM-12` / `/jira done SCRUM-12` — transition issues
+- `/jira sprint start` / `/jira sprint close` — manage sprints
+
+**Workflow:** Create Jira stories before implementation, transition to "In Progress" when starting work, and mark "Done" when complete. Credentials are in `.env.local` (`JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`).

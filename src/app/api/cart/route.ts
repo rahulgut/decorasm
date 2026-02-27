@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Cart from '@/lib/models/Cart';
 import Product from '@/lib/models/Product';
+import { auth } from '@/lib/auth';
 
 function isValidObjectId(s: string): boolean {
   return mongoose.Types.ObjectId.isValid(s) && /^[a-f\d]{24}$/i.test(s);
@@ -15,6 +16,10 @@ function isValidQuantity(q: unknown): q is number {
 }
 
 async function getSessionId(): Promise<string> {
+  const session = await auth();
+  if (session?.user?.id) {
+    return `user:${session.user.id}`;
+  }
   const cookieStore = await cookies();
   let sessionId = cookieStore.get('cart_session')?.value;
   if (!sessionId) {

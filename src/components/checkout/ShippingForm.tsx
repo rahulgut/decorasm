@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useCart } from '@/hooks/useCart';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 
 export default function ShippingForm() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { refreshCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -22,6 +24,39 @@ export default function ShippingForm() {
     zipCode: '',
     country: 'US',
   });
+
+  // Pre-fill from user profile if logged in
+  useEffect(() => {
+    async function prefill() {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (!res.ok) return;
+        const data = await res.json();
+        const addr = data.shippingAddress;
+        if (addr?.address) {
+          setForm((prev) => ({
+            ...prev,
+            fullName: addr.fullName || prev.fullName,
+            email: addr.email || data.email || prev.email,
+            phone: addr.phone || prev.phone,
+            address: addr.address || prev.address,
+            city: addr.city || prev.city,
+            state: addr.state || prev.state,
+            zipCode: addr.zipCode || prev.zipCode,
+          }));
+        } else if (data.email) {
+          setForm((prev) => ({
+            ...prev,
+            fullName: data.name || prev.fullName,
+            email: data.email || prev.email,
+          }));
+        }
+      } catch {
+        // silently fail
+      }
+    }
+    if (session?.user) prefill();
+  }, [session]);
 
   const update = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

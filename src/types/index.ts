@@ -58,6 +58,16 @@ export interface IOrder {
   total: number;
   shippingAddress: IShippingAddress;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IUser {
+  _id: string;
+  name: string;
+  email: string;
+  shippingAddress?: IShippingAddress;
   createdAt: string;
   updatedAt: string;
 }
