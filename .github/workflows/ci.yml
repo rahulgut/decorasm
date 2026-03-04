@@ -111,6 +111,7 @@ jobs:
 
     env:
       MONGODB_URI: mongodb://localhost:27017/decorasm
+      AUTH_SECRET: ci-test-secret-do-not-use-in-production
 
     steps:
       - name: Checkout code
@@ -185,6 +186,7 @@ jobs:
 
     env:
       MONGODB_URI: mongodb://localhost:27017/decorasm
+      AUTH_SECRET: ci-test-secret-do-not-use-in-production
 
     steps:
       - name: Checkout code
@@ -275,6 +277,7 @@ jobs:
 
     env:
       MONGODB_URI: mongodb://localhost:27017/decorasm
+      AUTH_SECRET: ci-test-secret-do-not-use-in-production
 
     steps:
       - name: Checkout code
