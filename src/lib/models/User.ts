@@ -11,6 +11,7 @@ const UserSchema = new Schema(
       trim: true,
     },
     password: { type: String, required: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
     shippingAddress: {
       fullName: String,
       email: String,
