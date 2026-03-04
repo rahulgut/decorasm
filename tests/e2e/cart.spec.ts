@@ -37,7 +37,7 @@ async function addProductToCart(
   }
 
   await page.getByRole('button', { name: 'Add to Cart' }).click();
-  await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
   await page.goto('/cart');
   // Wait for the cart to finish loading (the loading text disappears)
   await expect(page.getByText('Loading cart...')).not.toBeVisible({ timeout: 5000 });
@@ -206,7 +206,7 @@ test.describe('Cart page (/cart)', () => {
       // Go back and add a second distinct product
       await page.goto(`/products/${EXPENSIVE_PRODUCT.slug}`);
       await page.getByRole('button', { name: 'Add to Cart' }).click();
-      await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
       await page.goto('/cart');
       await expect(page.getByText('Loading cart...')).not.toBeVisible({ timeout: 5000 });
 

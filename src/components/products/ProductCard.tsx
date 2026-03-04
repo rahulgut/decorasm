@@ -4,6 +4,7 @@ import { IProduct } from '@/types';
 import { formatPrice, capitalize } from '@/lib/utils';
 import Badge from '../ui/Badge';
 import WishlistButton from './WishlistButton';
+import ProductRating from './ProductRating';
 
 interface ProductCardProps {
   product: IProduct;
@@ -37,6 +38,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-medium text-charcoal-800 group-hover:text-brand-700 transition-colors line-clamp-1">
             {product.name}
           </h3>
+          <ProductRating productId={product._id} />
           <p className="text-brand-700 font-semibold mt-1">{formatPrice(product.price)}</p>
         </div>
       </div>

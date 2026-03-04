@@ -9,6 +9,7 @@ import { formatPrice, capitalize } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import WishlistButton from '@/components/products/WishlistButton';
 import Badge from '@/components/ui/Badge';
+import ReviewsList from '@/components/reviews/ReviewsList';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://decorasm.com';
 
@@ -221,6 +222,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-16 border-t border-charcoal-100 pt-12">
+          <ReviewsList productId={product._id.toString()} />
         </div>
       </div>
     </>
