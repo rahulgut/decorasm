@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 
 /**
  * Admin Dashboard E2E tests — covers:
@@ -16,7 +16,7 @@ const ADMIN_PASS = 'admin123';
 const USER_EMAIL = 'testuser-admin@example.com';
 const USER_PASS = 'password123';
 
-async function registerUser(request: ReturnType<Page['request']>) {
+async function registerUser(request: APIRequestContext) {
   await request.post('/api/auth/register', {
     data: { name: 'Admin Test User', email: USER_EMAIL, password: USER_PASS },
   });
@@ -27,11 +27,10 @@ async function loginAs(page: Page, email: string, password: string) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign In' }).click();
-  // Wait for redirect after login
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
 }
 
-async function seedDatabase(request: ReturnType<Page['request']>) {
+async function seedDatabase(request: APIRequestContext) {
   await request.post('/api/seed');
 }
 
