@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
+import User from '@/lib/models/User';
 import { seedProducts } from '@/lib/seed-data';
 
 const SEED_SECRET = process.env.SEED_SECRET || '';
@@ -20,8 +21,20 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     await Product.deleteMany({});
     const products = await Product.insertMany(seedProducts);
+
+    // Seed admin user (upsert to avoid duplicates)
+    const bcrypt = (await import('bcryptjs')).default;
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    await User.deleteOne({ email: 'admin@decorasm.com' });
+    await User.create({
+      name: 'Admin',
+      email: 'admin@decorasm.com',
+      password: adminPassword,
+      role: 'admin',
+    });
+
     return NextResponse.json({
-      message: `Seeded ${products.length} products`,
+      message: `Seeded ${products.length} products and admin user`,
       count: products.length,
     });
   } catch (error) {
