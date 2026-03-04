@@ -54,7 +54,7 @@ Visual regression tests live in `tests/visual/` with a separate config (`playwri
 
 **Git hooks:** Husky runs lint-staged on pre-commit (ESLint --fix on staged `.ts/.tsx/.js/.jsx` files).
 
-**CI/CD:** GitHub Actions runs 8 jobs on push/PR to main: lint, type-check, build, e2e, visual regression (blocking); security audit, Lighthouse CI, bundle size report (informational).
+**CI/CD:** GitHub Actions runs 6 jobs on push/PR to main: lint, type-check, build (blocking); security audit, Lighthouse CI, bundle size report (informational). E2E tests run locally only.
 
 ## Jira Integration
 

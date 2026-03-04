@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
+import SearchAutocomplete from '../search/SearchAutocomplete';
 
 interface MobileMenuProps {
   open: boolean;
@@ -64,8 +65,11 @@ export default function MobileMenu({ open, onClose, links }: MobileMenuProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+        <div className="mt-12 mb-4">
+          <SearchAutocomplete />
+        </div>
         <nav aria-label="Mobile navigation">
-          <ul className="mt-12 space-y-4">
+          <ul className="space-y-4">
             {links.map((link) => (
               <li key={link.href}>
                 <Link

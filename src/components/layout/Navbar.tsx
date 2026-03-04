@@ -8,6 +8,7 @@ import CartIcon from '../cart/CartIcon';
 import WishlistIcon from './WishlistIcon';
 import MobileMenu from './MobileMenu';
 import Logo from '../ui/Logo';
+import SearchAutocomplete from '../search/SearchAutocomplete';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -64,6 +65,11 @@ export default function Navbar() {
                 </Link>
               );
             })}
+          </div>
+
+          {/* Search */}
+          <div className="hidden md:block">
+            <SearchAutocomplete />
           </div>
 
           {/* Cart + Auth + Mobile Toggle */}
