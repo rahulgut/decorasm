@@ -35,7 +35,7 @@ async function addProductToCart(page: Page, slug: string, quantity = 1) {
   }
 
   await page.getByRole('button', { name: 'Add to Cart' }).click();
-  await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
 }
 
 /**
@@ -181,8 +181,8 @@ test.describe('Checkout page (/checkout)', () => {
       await expect(page.getByPlaceholder('10001')).toBeVisible();
     });
 
-    test('renders "Place Order" submit button', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Place Order' })).toBeVisible();
+    test('renders "Proceed to Payment" submit button', async ({ page }) => {
+      await expect(page.getByRole('button', { name: 'Proceed to Payment' })).toBeVisible();
     });
   });
 
@@ -192,11 +192,11 @@ test.describe('Checkout page (/checkout)', () => {
     test.beforeEach(async ({ page }) => {
       await addProductToCart(page, PRODUCT.slug);
       await page.goto('/checkout');
-      await expect(page.getByRole('button', { name: 'Place Order' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Proceed to Payment' })).toBeVisible();
     });
 
     test('submitting empty form shows all required field errors', async ({ page }) => {
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
 
       await expect(page.getByText('Name is required')).toBeVisible();
       await expect(page.getByText('Email is required')).toBeVisible();
@@ -211,13 +211,13 @@ test.describe('Checkout page (/checkout)', () => {
       await expect(page.getByText('Shipping Information')).toBeVisible({ timeout: 5000 });
       await page.getByPlaceholder('John Doe').fill('Test User');
       await page.getByPlaceholder('john@example.com').fill('not-an-email');
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
       await expect(page.getByText('Invalid email')).toBeVisible({ timeout: 5000 });
     });
 
     test('valid email clears the email error', async ({ page }) => {
       // Trigger the error first
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
       await expect(page.getByText('Email is required')).toBeVisible();
 
       // Fill in valid email
@@ -228,7 +228,7 @@ test.describe('Checkout page (/checkout)', () => {
     });
 
     test('filling Full Name clears the name error', async ({ page }) => {
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
       await expect(page.getByText('Name is required')).toBeVisible();
 
       await page.getByPlaceholder('John Doe').fill('Alice');
@@ -236,8 +236,8 @@ test.describe('Checkout page (/checkout)', () => {
     });
 
     test('form does not submit while there are validation errors', async ({ page }) => {
-      // Leave all fields blank and click Place Order
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      // Leave all fields blank and click Proceed to Payment
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
 
       // URL must remain /checkout (no redirect to confirmation)
       await expect(page).toHaveURL('/checkout');
@@ -253,7 +253,7 @@ test.describe('Checkout page (/checkout)', () => {
       await page.getByPlaceholder('NY').fill('CO');
       // Leave ZIP Code blank
 
-      await page.getByRole('button', { name: 'Place Order' }).click();
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
 
       // Only the ZIP error should appear
       await expect(page.getByText('ZIP code is required')).toBeVisible();
@@ -262,10 +262,10 @@ test.describe('Checkout page (/checkout)', () => {
     });
   });
 
-  // ── "Place Order" loading state ──────────────────────────────────────────
+  // ── "Proceed to Payment" loading state ──────────────────────────────────────────
 
   test.describe('Submit button loading state', () => {
-    test('button shows "Placing Order..." while the request is in-flight', async ({ page }) => {
+    test('button shows "Redirecting to Payment..." while the request is in-flight', async ({ page }) => {
       await addProductToCart(page, PRODUCT.slug);
       await page.goto('/checkout');
 
@@ -277,9 +277,9 @@ test.describe('Checkout page (/checkout)', () => {
         await route.continue();
       });
 
-      page.getByRole('button', { name: 'Place Order' }).click();
+      page.getByRole('button', { name: 'Proceed to Payment' }).click();
       await expect(
-        page.getByRole('button', { name: 'Placing Order...' })
+        page.getByRole('button', { name: 'Redirecting to Payment...' })
       ).toBeVisible({ timeout: 3000 });
 
       pending.resolve?.();
@@ -287,45 +287,55 @@ test.describe('Checkout page (/checkout)', () => {
     });
   });
 
-  // ── End-to-end purchase flow ─────────────────────────────────────────────
+  // ── End-to-end purchase flow (with Stripe redirect) ─────────────────────
+  // NOTE: Since checkout now redirects to Stripe, these tests intercept the
+  // /api/orders response to capture the order number, then navigate directly
+  // to the confirmation page.
 
   test.describe('Full purchase flow', () => {
-    test('completes a purchase and reaches the confirmation page', async ({ page }) => {
-      // 1. Browse to a product detail page
-      await page.goto('/products/brass-pendant-light');
-      await expect(
-        page.getByRole('heading', { name: 'Brass Pendant Light' })
-      ).toBeVisible();
+    /**
+     * Helper: submits checkout form and intercepts the Stripe redirect.
+     * Returns the order number from the API response.
+     */
+    async function submitCheckoutAndIntercept(page: Page): Promise<string> {
+      // Capture the /api/orders response body via route fulfillment
+      // (using waitForResponse + response.json() fails because the page navigates
+      // to Stripe and the response body gets garbage-collected)
+      let capturedData: { url: string; orderNumber: string } | null = null;
+      await page.route('**/api/orders', async (route) => {
+        const response = await route.fetch();
+        const body = await response.json();
+        capturedData = body;
+        await route.fulfill({ response, body: JSON.stringify(body) });
+      });
+      // Block navigation to Stripe so the test can continue
+      await page.route('https://checkout.stripe.com/**', (route) => route.abort());
 
-      // 2. Add the product to the cart
-      await page.getByRole('button', { name: 'Add to Cart' }).click();
-      await expect(
-        page.getByRole('button', { name: 'Added!' })
-      ).toBeVisible({ timeout: 5000 });
+      await page.getByRole('button', { name: 'Proceed to Payment' }).click();
+      // Wait for the API call to complete
+      await page.waitForResponse('**/api/orders');
 
-      // 3. Navigate to the cart and proceed to checkout
-      await page.goto('/cart');
-      await expect(page.getByText('Brass Pendant Light')).toBeVisible({ timeout: 5000 });
-      await page.getByRole('link', { name: 'Proceed to Checkout' }).click();
-      await expect(page).toHaveURL('/checkout');
+      expect(capturedData).not.toBeNull();
+      expect(capturedData!.url).toContain('checkout.stripe.com');
+      expect(capturedData!.orderNumber).toMatch(/^DEC-/);
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      return capturedData!.orderNumber;
+    }
 
-      // 4. Fill out the shipping form
+    test('checkout API returns Stripe URL and order number', async ({ page }) => {
+      await addProductToCart(page, PRODUCT.slug);
+      await page.goto('/checkout');
       await fillShippingForm(page);
-
-      // 5. Place the order
-      await page.getByRole('button', { name: 'Place Order' }).click();
-
-      // 6. Should land on /checkout/confirmation?order=...
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
+      const orderNumber = await submitCheckoutAndIntercept(page);
+      expect(orderNumber).toBeTruthy();
     });
 
     test('confirmation page shows "Thank You!" heading', async ({ page }) => {
       await addProductToCart(page, PRODUCT.slug);
       await page.goto('/checkout');
       await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
+      const orderNumber = await submitCheckoutAndIntercept(page);
+      await page.goto(`/checkout/confirmation?order=${orderNumber}`);
       await expect(page.getByRole('heading', { name: 'Thank You!' })).toBeVisible();
     });
 
@@ -333,92 +343,44 @@ test.describe('Checkout page (/checkout)', () => {
       await addProductToCart(page, PRODUCT.slug);
       await page.goto('/checkout');
       await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
-      await expect(
-        page.getByText('Your order has been placed successfully')
-      ).toBeVisible();
+      const orderNumber = await submitCheckoutAndIntercept(page);
+      await page.goto(`/checkout/confirmation?order=${orderNumber}`);
+      await expect(page.getByText('payment received successfully')).toBeVisible();
     });
 
-    test('confirmation page displays the order number from the URL', async ({ page }) => {
+    test('confirmation page displays the order number', async ({ page }) => {
       await addProductToCart(page, PRODUCT.slug);
       await page.goto('/checkout');
       await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
-      // Extract the order number from the URL query string
-      const url = page.url();
-      const orderNumber = new URL(url).searchParams.get('order');
-      expect(orderNumber).toBeTruthy();
-
-      // The order number should be rendered on screen
-      await expect(page.getByText(orderNumber!)).toBeVisible();
-      // "Order Number" label should also be present
+      const orderNumber = await submitCheckoutAndIntercept(page);
+      await page.goto(`/checkout/confirmation?order=${orderNumber}`);
+      await expect(page.getByText(orderNumber)).toBeVisible();
       await expect(page.getByText('Order Number')).toBeVisible();
     });
 
-    test('confirmation page has "Continue Shopping" link to /products', async ({ page }) => {
-      await addProductToCart(page, PRODUCT.slug);
-      await page.goto('/checkout');
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
+    test('confirmation page has "Continue Shopping" and "Back to Home" links', async ({ page }) => {
+      await page.goto('/checkout/confirmation?order=DEC-TEST1234-ABCD1234');
       const continueBtn = page.getByRole('link', { name: 'Continue Shopping' });
       await expect(continueBtn).toBeVisible();
       await expect(continueBtn).toHaveAttribute('href', '/products');
-    });
-
-    test('confirmation page has "Back to Home" link to /', async ({ page }) => {
-      await addProductToCart(page, PRODUCT.slug);
-      await page.goto('/checkout');
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
       const homeBtn = page.getByRole('link', { name: 'Back to Home' });
       await expect(homeBtn).toBeVisible();
       await expect(homeBtn).toHaveAttribute('href', '/');
     });
 
     test('"Continue Shopping" navigates to /products', async ({ page }) => {
-      await addProductToCart(page, PRODUCT.slug);
-      await page.goto('/checkout');
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
+      await page.goto('/checkout/confirmation?order=DEC-TEST1234-ABCD1234');
       await page.getByRole('link', { name: 'Continue Shopping' }).click();
       await expect(page).toHaveURL('/products');
     });
 
     test('"Back to Home" navigates to /', async ({ page }) => {
-      await addProductToCart(page, PRODUCT.slug);
-      await page.goto('/checkout');
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
+      await page.goto('/checkout/confirmation?order=DEC-TEST1234-ABCD1234');
       await page.getByRole('link', { name: 'Back to Home' }).click();
       await expect(page).toHaveURL('/');
     });
 
-    test('cart is cleared after a successful order', async ({ page }) => {
-      await addProductToCart(page, PRODUCT.slug);
-      await page.goto('/checkout');
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-
-      // After order, the cart badge should be gone
-      const badge = page.locator('a[href="/cart"] span');
-      await expect(badge).not.toBeVisible();
-    });
-
     test('full flow with expensive product uses free shipping', async ({ page }) => {
-      // Moroccan Handwoven Rug ($799) qualifies for free shipping
       await addProductToCart(page, EXPENSIVE.slug);
       await page.goto('/cart');
       const shippingRow = page.locator('div.flex.justify-between').filter({ hasText: 'Shipping' });
@@ -427,16 +389,10 @@ test.describe('Checkout page (/checkout)', () => {
       await page.getByRole('link', { name: 'Proceed to Checkout' }).click();
       await expect(page).toHaveURL('/checkout');
 
-      // Order summary sidebar should also show Free shipping
       const summaryShipping = page
         .locator('div.flex.justify-between')
         .filter({ hasText: 'Shipping' });
       await expect(summaryShipping).toContainText('Free');
-
-      await fillShippingForm(page);
-      await page.getByRole('button', { name: 'Place Order' }).click();
-      await expect(page).toHaveURL(/\/checkout\/confirmation\?order=/, { timeout: 15000 });
-      await expect(page.getByRole('heading', { name: 'Thank You!' })).toBeVisible();
     });
   });
 
@@ -451,10 +407,10 @@ test.describe('Checkout page (/checkout)', () => {
     });
 
     test('visiting confirmation page with a provided order param shows the order number', async ({ page }) => {
-      await page.goto('/checkout/confirmation?order=TEST-12345');
+      await page.goto('/checkout/confirmation?order=DEC-TEST1234-ABCD1234');
       await expect(page.getByRole('heading', { name: 'Thank You!' })).toBeVisible();
       await expect(page.getByText('Order Number')).toBeVisible();
-      await expect(page.getByText('TEST-12345')).toBeVisible();
+      await expect(page.getByText('DEC-TEST1234-ABCD1234')).toBeVisible();
     });
   });
 });

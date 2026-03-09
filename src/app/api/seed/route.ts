@@ -19,8 +19,20 @@ export async function POST(request: NextRequest) {
 
   try {
     await dbConnect();
-    await Product.deleteMany({});
-    const products = await Product.insertMany(seedProducts);
+    // Upsert products by slug so IDs stay stable across re-seeds
+    // (prevents parallel test interference from ID changes)
+    const seedSlugs = seedProducts.map((p) => p.slug);
+    const bulkOps = seedProducts.map((p) => ({
+      updateOne: {
+        filter: { slug: p.slug },
+        update: { $set: p },
+        upsert: true,
+      },
+    }));
+    await Product.bulkWrite(bulkOps);
+    // Remove any products not in the seed data (e.g. test leftovers)
+    await Product.deleteMany({ slug: { $nin: seedSlugs } });
+    const products = await Product.find({});
 
     // Seed admin user (upsert to avoid duplicates)
     const bcrypt = (await import('bcryptjs')).default;

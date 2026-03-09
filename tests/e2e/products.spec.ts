@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 
 /**
  * Product Catalog (/products) tests — covers:
@@ -12,6 +12,10 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Product Catalog (/products)', () => {
+  test.beforeAll(async ({ request }: { request: APIRequestContext }) => {
+    await request.post('/api/seed');
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/products');
     // Wait for the product grid to be populated before each test
@@ -41,7 +45,7 @@ test.describe('Product Catalog (/products)', () => {
 
     test('renders search input field', async ({ page }) => {
       await expect(
-        page.getByPlaceholder('Search products...')
+        page.locator('#product-search')
       ).toBeVisible();
     });
   });
@@ -49,10 +53,10 @@ test.describe('Product Catalog (/products)', () => {
   // ── Category pills ─────────────────────────────────────────────────────────
 
   test.describe('Category filter pills', () => {
-    // Category pills are rounded-full links in a flex container
-    // We scope to these to avoid matching navbar links or product card labels
+    // Category pills are rounded-full links inside #main-content
+    // Use exact text matching and scope to main to avoid navbar duplicates
     const pill = (page: import('@playwright/test').Page, name: string) =>
-      page.locator('a.rounded-full', { hasText: name });
+      page.locator('#main-content a.rounded-full').filter({ hasText: new RegExp(`^${name}$`) });
 
     test('renders all six category pills', async ({ page }) => {
       const expectedPills = ['All', 'Furniture', 'Lighting', 'Wall Art', 'Textiles', 'Accessories'];
@@ -152,13 +156,13 @@ test.describe('Product Catalog (/products)', () => {
 
   test.describe('Search functionality', () => {
     test('search input is visible and accepts text', async ({ page }) => {
-      const searchInput = page.getByPlaceholder('Search products...');
+      const searchInput = page.locator('#product-search');
       await searchInput.fill('lamp');
       await expect(searchInput).toHaveValue('lamp');
     });
 
     test('submitting a search filters products by name', async ({ page }) => {
-      const searchInput = page.getByPlaceholder('Search products...');
+      const searchInput = page.locator('#product-search');
       await searchInput.fill('lamp');
       await searchInput.press('Enter');
 
@@ -174,7 +178,7 @@ test.describe('Product Catalog (/products)', () => {
     });
 
     test('search is case-insensitive', async ({ page }) => {
-      const searchInput = page.getByPlaceholder('Search products...');
+      const searchInput = page.locator('#product-search');
       await searchInput.fill('CHAIR');
       await searchInput.press('Enter');
 
@@ -191,7 +195,7 @@ test.describe('Product Catalog (/products)', () => {
 
     test('search pre-populates input when search param is in URL', async ({ page }) => {
       await page.goto('/products?search=vase');
-      const searchInput = page.getByPlaceholder('Search products...');
+      const searchInput = page.locator('#product-search');
       await expect(searchInput).toHaveValue('vase');
     });
 

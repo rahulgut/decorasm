@@ -102,9 +102,17 @@ export default function ShippingForm() {
         return;
       }
 
-      const { orderNumber } = await res.json();
+      const data = await res.json();
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      // Fallback for non-Stripe flow
       await refreshCart();
-      router.push(`/checkout/confirmation?order=${orderNumber}`);
+      router.push(`/checkout/confirmation?order=${data.orderNumber}`);
     } catch {
       alert('Something went wrong. Please try again.');
       setSubmitting(false);
@@ -112,7 +120,7 @@ export default function ShippingForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <h2 className="text-xl font-semibold text-charcoal-800 mb-4">Shipping Information</h2>
 
       <Input
@@ -175,7 +183,7 @@ export default function ShippingForm() {
       </div>
 
       <Button type="submit" size="lg" className="w-full mt-6" disabled={submitting}>
-        {submitting ? 'Placing Order...' : 'Place Order'}
+        {submitting ? 'Redirecting to Payment...' : 'Proceed to Payment'}
       </Button>
     </form>
   );

@@ -34,6 +34,12 @@ const OrderSchema = new Schema(
       enum: ['pending', 'confirmed', 'shipped', 'delivered'],
       default: 'pending',
     },
+    stripeSessionId: { type: String, default: null },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'paid', 'failed'],
+      default: 'unpaid',
+    },
   },
   { timestamps: true }
 );
