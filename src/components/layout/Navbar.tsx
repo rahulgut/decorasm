@@ -125,7 +125,7 @@ export default function Navbar() {
             )}
 
             <button
-              className="md:hidden p-2 text-charcoal-600 hover:text-brand-700"
+              className="md:hidden p-2.5 text-charcoal-600 hover:text-brand-700"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >

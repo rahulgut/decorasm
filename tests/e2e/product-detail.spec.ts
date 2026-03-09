@@ -197,7 +197,7 @@ test.describe('Product Detail Page', () => {
 
       // Should show "Adding..."
       await expect(
-        page.getByRole('button', { name: 'Adding...' })
+        page.getByRole('button', { name: 'Adding to cart' })
       ).toBeVisible({ timeout: 2000 });
 
       // Release the route
@@ -213,14 +213,14 @@ test.describe('Product Detail Page', () => {
 
       // After the API call resolves, text changes to "Added!"
       await expect(
-        page.getByRole('button', { name: 'Added!' })
+        page.getByRole('button', { name: 'Added to cart' })
       ).toBeVisible({ timeout: 5000 });
     });
 
     test('button reverts to "Add to Cart" after the 2-second flash', async ({ page }) => {
       const addButton = page.getByRole('button', { name: 'Add to Cart' });
       await addButton.click();
-      await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
 
       // After 2 seconds the flash clears
       await expect(
@@ -234,7 +234,7 @@ test.describe('Product Detail Page', () => {
       await expect(badge).not.toBeVisible();
 
       await page.getByRole('button', { name: 'Add to Cart' }).click();
-      await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
 
       // The badge should now show "1"
       await expect(badge).toBeVisible();
@@ -247,7 +247,7 @@ test.describe('Product Detail Page', () => {
       await incrementBtn.click(); // quantity = 2
 
       await page.getByRole('button', { name: 'Add to Cart' }).click();
-      await expect(page.getByRole('button', { name: 'Added!' })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible({ timeout: 5000 });
 
       const badge = page.locator('a[href="/cart"] span');
       await expect(badge).toHaveText('2');

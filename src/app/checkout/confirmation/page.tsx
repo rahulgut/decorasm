@@ -1,15 +1,31 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
+import { useCart } from '@/hooks/useCart';
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
+  const { refreshCart } = useCart();
   const rawOrder = searchParams.get('order');
   const ORDER_NUMBER_RE = /^DEC-[A-Z0-9]+-[A-F0-9]{8}$/;
   const orderNumber = rawOrder && ORDER_NUMBER_RE.test(rawOrder) ? rawOrder : null;
+
+  // Verify payment and refresh cart after successful checkout
+  useEffect(() => {
+    if (!orderNumber) return;
+    async function verify() {
+      try {
+        await fetch(`/api/orders/verify?order=${orderNumber}`);
+      } catch {
+        // silently fail — webhook will handle it
+      }
+      refreshCart();
+    }
+    verify();
+  }, [orderNumber, refreshCart]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
@@ -22,7 +38,7 @@ function ConfirmationContent() {
 
       <h1 className="text-3xl font-bold text-charcoal-800 mb-3">Thank You!</h1>
       <p className="text-charcoal-500 mb-8">
-        Your order has been placed successfully.
+        Your order has been placed and payment received successfully.
       </p>
 
       {orderNumber && (

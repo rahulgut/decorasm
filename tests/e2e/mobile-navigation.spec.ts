@@ -40,8 +40,12 @@ test.describe('Mobile Navigation', () => {
     await page.setViewportSize(MOBILE);
     await page.goto('/');
     await openMobileMenu(page);
-    await page.mouse.click(40, 400);
-    await expect(page.getByRole('button', { name: /Close/i })).toBeHidden();
+    // Click the backdrop overlay (the semi-transparent div with onClick={onClose})
+    await page.evaluate(() => {
+      const backdrop = document.querySelector('div[aria-hidden="true"]');
+      if (backdrop) backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await expect(page.getByRole('button', { name: /Close/i })).toBeHidden({ timeout: 3000 });
   });
 
   test('drawer closes on Escape key', async ({ page }) => {

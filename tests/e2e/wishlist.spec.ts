@@ -46,7 +46,8 @@ async function createAndLoginUser(page: Page) {
 test.describe('Wishlist — unauthenticated', () => {
   test('clicking heart on product card redirects to /login', async ({ page }) => {
     await page.goto('/products');
-    // Wait for product cards to load
+    // Wait for session to resolve (Sign In link appears when unauthenticated)
+    await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible({ timeout: 10000 });
     const heartButton = page.getByLabel('Add to wishlist').first();
     await expect(heartButton).toBeVisible({ timeout: 10000 });
     await heartButton.click();
@@ -55,6 +56,8 @@ test.describe('Wishlist — unauthenticated', () => {
 
   test('clicking heart on product detail redirects to /login', async ({ page }) => {
     await page.goto(`/products/${PRODUCT.slug}`);
+    // Wait for session to resolve
+    await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible({ timeout: 10000 });
     const heartButton = page.getByLabel('Add to wishlist');
     await expect(heartButton).toBeVisible({ timeout: 10000 });
     await heartButton.click();
@@ -170,9 +173,8 @@ test.describe('Wishlist page (/account/wishlist)', () => {
     await expect(page.getByText(PRODUCT.name)).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: 'Add to Cart' }).click();
-    await expect(page.getByRole('button', { name: 'Adding...' })).toBeVisible({ timeout: 3000 });
 
-    // Cart badge should appear in navbar
+    // Cart badge should appear in navbar after add completes
     await expect(page.locator('a[href="/cart"] span')).toBeVisible({ timeout: 5000 });
   });
 

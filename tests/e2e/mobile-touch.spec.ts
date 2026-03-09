@@ -4,6 +4,8 @@ const MOBILE = { width: 390, height: 844 };
 const MIN_TAP = 44;
 
 test.describe('Mobile Touch Interactions', () => {
+  test.use({ hasTouch: true });
+
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE);
   });

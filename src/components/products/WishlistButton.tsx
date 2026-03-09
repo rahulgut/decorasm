@@ -10,7 +10,7 @@ interface WishlistButtonProps {
 }
 
 export default function WishlistButton({ productId, className = '' }: WishlistButtonProps) {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
   const { isWishlisted, toggle } = useWishlist();
   const active = isWishlisted(productId);
@@ -18,8 +18,6 @@ export default function WishlistButton({ productId, className = '' }: WishlistBu
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (status === 'loading') return;
 
     if (!session?.user) {
       router.push('/login');

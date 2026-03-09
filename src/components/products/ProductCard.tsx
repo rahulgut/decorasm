@@ -11,6 +11,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  // Convert ObjectId to string for client component serialization
+  const productId = typeof product._id === 'string' ? product._id : String(product._id);
+
   return (
     <Link href={`/products/${product.slug}`} className="group">
       <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -28,7 +31,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
           <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <WishlistButton productId={product._id} />
+            <WishlistButton productId={productId} />
           </div>
         </div>
         <div className="p-4">
@@ -38,7 +41,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-medium text-charcoal-800 group-hover:text-brand-700 transition-colors line-clamp-1">
             {product.name}
           </h3>
-          <ProductRating productId={product._id} />
+          <ProductRating productId={productId} />
           <p className="text-brand-700 font-semibold mt-1">{formatPrice(product.price)}</p>
         </div>
       </div>

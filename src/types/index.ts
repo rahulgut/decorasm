@@ -58,6 +58,8 @@ export interface IOrder {
   total: number;
   shippingAddress: IShippingAddress;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  stripeSessionId?: string;
+  paymentStatus?: 'unpaid' | 'paid' | 'failed';
   userId?: string;
   createdAt: string;
   updatedAt: string;

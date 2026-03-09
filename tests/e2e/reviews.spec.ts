@@ -141,7 +141,7 @@ test.describe('Reviews — submit and display', () => {
     await page.getByPlaceholder('Summarize your experience').fill('Dup test review');
     await page.getByPlaceholder('What did you like or dislike').fill('First review body for dup test.');
     await page.getByRole('button', { name: 'Submit Review' }).click();
-    await expect(page.locator('h4').filter({ hasText: 'Dup test review' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h4').filter({ hasText: 'Dup test review' }).first()).toBeVisible({ timeout: 5000 });
 
     // Reload the page to get a clean form, then try duplicate
     await page.goto(productUrl());

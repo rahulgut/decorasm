@@ -6,6 +6,7 @@ import Cart from '@/lib/models/Cart';
 import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
 import { auth } from '@/lib/auth';
+import { stripe } from '@/lib/stripe';
 
 function generateOrderNumber(): string {
   const random = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -136,15 +137,19 @@ export async function POST(request: NextRequest) {
     const shipping = subtotal >= 10000 ? 0 : 999;
     const total = subtotal + shipping;
 
+    const orderNumber = generateOrderNumber();
+
+    // Create order with pending payment
     const order = await Order.create({
-      orderNumber: generateOrderNumber(),
+      orderNumber,
       userId,
       items,
       subtotal,
       shipping,
       total,
       shippingAddress,
-      status: 'confirmed',
+      status: 'pending',
+      paymentStatus: 'unpaid',
     });
 
     // Save shipping address to user profile
@@ -152,11 +157,54 @@ export async function POST(request: NextRequest) {
       await User.findByIdAndUpdate(userId, { shippingAddress });
     }
 
-    await Cart.deleteOne({ sessionId });
+    // Create Stripe Checkout Session
+    const origin = request.headers.get('origin') || 'http://localhost:3000';
+
+    const lineItems = items.map((item: { name: string; price: number; quantity: number; image: string }) => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: item.name,
+          ...(item.image ? { images: [item.image] } : {}),
+        },
+        unit_amount: item.price,
+      },
+      quantity: item.quantity,
+    }));
+
+    // Add shipping as a line item if applicable
+    if (shipping > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Shipping' },
+          unit_amount: shipping,
+        },
+        quantity: 1,
+      });
+    }
+
+    const stripeSession = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      customer_email: shippingAddress.email,
+      metadata: {
+        orderId: order._id.toString(),
+        orderNumber,
+        sessionId,
+      },
+      success_url: `${origin}/checkout/confirmation?order=${orderNumber}`,
+      cancel_url: `${origin}/checkout?cancelled=true`,
+    });
+
+    // Store Stripe session ID on the order
+    await Order.findByIdAndUpdate(order._id, {
+      stripeSessionId: stripeSession.id,
+    });
 
     return NextResponse.json({
-      orderNumber: order.orderNumber,
-      total: order.total,
+      url: stripeSession.url,
+      orderNumber,
     });
   } catch (error) {
     console.error('Order creation error:', error);
