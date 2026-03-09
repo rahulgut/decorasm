@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCart } from '@/hooks/useCart';
 import ShippingForm from '@/components/checkout/ShippingForm';
 import OrderSummary from '@/components/checkout/OrderSummary';
 import EmptyState from '@/components/ui/EmptyState';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { items, loading } = useCart();
   const searchParams = useSearchParams();
   const cancelled = searchParams.get('cancelled');
@@ -52,5 +53,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center"><p className="text-charcoal-400">Loading...</p></div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
