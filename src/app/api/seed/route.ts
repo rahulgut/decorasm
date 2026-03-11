@@ -35,16 +35,14 @@ export async function POST(request: NextRequest) {
     await Product.deleteMany({ slug: { $nin: seedSlugs } });
     const products = await Product.find({});
 
-    // Seed admin user (upsert to avoid duplicates)
+    // Seed admin user (upsert to avoid parallel test interference)
     const bcrypt = (await import('bcryptjs')).default;
     const adminPassword = await bcrypt.hash('admin123', 10);
-    await User.deleteOne({ email: 'admin@decorasm.com' });
-    await User.create({
-      name: 'Admin',
-      email: 'admin@decorasm.com',
-      password: adminPassword,
-      role: 'admin',
-    });
+    await User.findOneAndUpdate(
+      { email: 'admin@decorasm.com' },
+      { $set: { name: 'Admin', email: 'admin@decorasm.com', password: adminPassword, role: 'admin' } },
+      { upsert: true }
+    );
 
     // Seed coupons (upsert by code)
     const seedCoupons = [
@@ -75,9 +73,27 @@ export async function POST(request: NextRequest) {
         maxUsesPerUser: 1,
         isActive: true,
       },
+      {
+        code: 'INACTIVE_SEED',
+        discountType: 'percent',
+        discountValue: 5,
+        minOrderAmount: 0,
+        maxUses: 0,
+        maxUsesPerUser: 0,
+        isActive: false,
+      },
+      {
+        code: 'EXPIRED_SEED',
+        discountType: 'percent',
+        discountValue: 15,
+        minOrderAmount: 0,
+        maxUses: 0,
+        maxUsesPerUser: 0,
+        isActive: true,
+        expiresAt: new Date('2020-01-01'),
+      },
     ];
 
-    const couponCodes = seedCoupons.map((c) => c.code);
     const couponOps = seedCoupons.map((c) => ({
       updateOne: {
         filter: { code: c.code },
@@ -86,7 +102,6 @@ export async function POST(request: NextRequest) {
       },
     }));
     await Coupon.bulkWrite(couponOps);
-    await Coupon.deleteMany({ code: { $nin: couponCodes } });
 
     return NextResponse.json({
       message: `Seeded ${products.length} products, ${seedCoupons.length} coupons, and admin user`,

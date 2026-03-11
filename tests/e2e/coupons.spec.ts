@@ -21,7 +21,7 @@ async function loginAsAdmin(page: Page) {
   await page.getByLabel('Email').fill(ADMIN_EMAIL);
   await page.getByLabel('Password').fill(ADMIN_PASS);
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
 }
 
 async function addProductToCart(page: Page, slug: string) {
@@ -39,7 +39,6 @@ test.describe('Coupon API — Validation', () => {
   });
 
   test('valid coupon returns discount amount', async ({ page }) => {
-    // Add item to cart to get a session
     await addProductToCart(page, 'artisan-ceramic-vase');
 
     const response = await page.request.post('/api/coupons/validate', {
@@ -67,21 +66,11 @@ test.describe('Coupon API — Validation', () => {
   });
 
   test('inactive coupon rejected', async ({ page }) => {
-    // Create an inactive coupon via admin API (need to login first)
+    // Use INACTIVE_SEED coupon from seed data
     await addProductToCart(page, 'artisan-ceramic-vase');
-    await loginAsAdmin(page);
-
-    await page.request.post('/api/admin/coupons', {
-      data: {
-        code: 'INACTIVE1',
-        discountType: 'percent',
-        discountValue: 5,
-        isActive: false,
-      },
-    });
 
     const response = await page.request.post('/api/coupons/validate', {
-      data: { code: 'INACTIVE1' },
+      data: { code: 'INACTIVE_SEED' },
     });
     expect(response.ok()).toBe(false);
 
@@ -90,21 +79,11 @@ test.describe('Coupon API — Validation', () => {
   });
 
   test('expired coupon rejected', async ({ page }) => {
+    // Use EXPIRED_SEED coupon from seed data
     await addProductToCart(page, 'artisan-ceramic-vase');
-    await loginAsAdmin(page);
-
-    await page.request.post('/api/admin/coupons', {
-      data: {
-        code: 'EXPIRED1',
-        discountType: 'percent',
-        discountValue: 15,
-        isActive: true,
-        expiresAt: '2020-01-01',
-      },
-    });
 
     const response = await page.request.post('/api/coupons/validate', {
-      data: { code: 'EXPIRED1' },
+      data: { code: 'EXPIRED_SEED' },
     });
     expect(response.ok()).toBe(false);
 
@@ -121,8 +100,7 @@ test.describe('Coupon API — Validation', () => {
     });
 
     const data = await response.json();
-    // Depending on product price, this may or may not pass the minimum check.
-    // The test validates the API responds correctly either way.
+    // Depending on product price, this may or may not pass the minimum check
     if (!response.ok()) {
       expect(data.error).toContain('Minimum order');
     } else {
@@ -145,10 +123,9 @@ test.describe('Coupon UI — Checkout Page', () => {
     await page.getByPlaceholder('Coupon code').fill('SAVE10');
     await page.getByRole('button', { name: 'Apply' }).click();
 
-    // Should show coupon applied with discount row
-    await expect(page.getByText('SAVE10')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('SAVE10', { exact: true })).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('applied')).toBeVisible();
-    await expect(page.getByText(/Discount/)).toBeVisible();
+    await expect(page.getByText(/Discount \(SAVE10\)/)).toBeVisible();
   });
 
   test('remove coupon clears discount', async ({ page }) => {
@@ -178,12 +155,20 @@ test.describe('Coupon UI — Checkout Page', () => {
 // ─── Admin Tests ────────────────────────────────────────────────
 
 test.describe('Admin — Coupon Management', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  // Unique code per worker to avoid cross-browser collisions
+  const TEST_CODE = `TEST${Date.now().toString(36).toUpperCase()}`;
+
   test.beforeAll(async ({ request }) => {
     await seedDatabase(request);
   });
 
-  test('coupon list shows seed data', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
+  });
+
+  test('coupon list shows seed data', async ({ page }) => {
     await page.goto('/admin/coupons');
 
     await expect(page.getByText('SAVE10')).toBeVisible({ timeout: 10000 });
@@ -192,10 +177,9 @@ test.describe('Admin — Coupon Management', () => {
   });
 
   test('create a coupon via admin UI', async ({ page }) => {
-    await loginAsAdmin(page);
     await page.goto('/admin/coupons/new');
 
-    await page.locator('#coupon-code').fill('TESTCOUPON');
+    await page.locator('#coupon-code').fill(TEST_CODE);
     await page.locator('#coupon-type').selectOption('fixed');
     await page.locator('#coupon-value').fill('10');
     await page.locator('#coupon-min-order').fill('25');
@@ -203,15 +187,14 @@ test.describe('Admin — Coupon Management', () => {
     await page.getByRole('button', { name: 'Create Coupon' }).click();
     await page.waitForURL('**/admin/coupons', { timeout: 10000 });
 
-    await expect(page.getByText('TESTCOUPON')).toBeVisible();
+    await expect(page.getByText(TEST_CODE)).toBeVisible({ timeout: 5000 });
   });
 
   test('edit a coupon', async ({ page }) => {
-    await loginAsAdmin(page);
     await page.goto('/admin/coupons');
 
-    // Find TESTCOUPON row and click edit
-    const row = page.locator('tr', { hasText: 'TESTCOUPON' });
+    const row = page.locator('tr', { hasText: TEST_CODE });
+    await expect(row).toBeVisible({ timeout: 10000 });
     await row.getByText('Edit').click();
 
     await page.waitForURL('**/edit', { timeout: 10000 });
@@ -222,10 +205,10 @@ test.describe('Admin — Coupon Management', () => {
   });
 
   test('delete a coupon', async ({ page }) => {
-    await loginAsAdmin(page);
     await page.goto('/admin/coupons');
 
-    const row = page.locator('tr', { hasText: 'TESTCOUPON' });
+    const row = page.locator('tr', { hasText: TEST_CODE });
+    await expect(row).toBeVisible({ timeout: 10000 });
 
     page.on('dialog', (dialog) => dialog.accept());
     await row.getByText('Delete').click();
