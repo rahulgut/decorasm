@@ -12,3 +12,9 @@ export function capitalize(str: string): string {
 export function sanitizeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+export function generateShareToken(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const crypto = require('crypto');
+  return crypto.randomBytes(18).toString('base64url');
+}

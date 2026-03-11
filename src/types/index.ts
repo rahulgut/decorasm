@@ -83,6 +83,21 @@ export interface ICoupon {
   updatedAt: string;
 }
 
+export interface IWishlistItem {
+  _id: string;
+  productId: IProduct;
+  createdAt: string;
+}
+
+export interface ISharedWishlist {
+  _id: string;
+  userId: string;
+  shareToken: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface IUser {
   _id: string;
   name: string;

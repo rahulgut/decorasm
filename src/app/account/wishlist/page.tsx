@@ -4,22 +4,17 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { IProduct } from '@/types';
+import { IWishlistItem } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCart } from '@/hooks/useCart';
-
-interface WishlistItemData {
-  _id: string;
-  productId: IProduct;
-  createdAt: string;
-}
+import ShareWishlistButton from '@/components/wishlist/ShareWishlistButton';
 
 export default function WishlistPage() {
   const { data: session } = useSession();
   const { toggle } = useWishlist();
   const { addItem } = useCart();
-  const [items, setItems] = useState<WishlistItemData[]>([]);
+  const [items, setItems] = useState<IWishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
@@ -86,9 +81,12 @@ export default function WishlistPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-charcoal-800">
-        Wishlist ({items.length} {items.length === 1 ? 'item' : 'items'})
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-charcoal-800">
+          Wishlist ({items.length} {items.length === 1 ? 'item' : 'items'})
+        </h2>
+        <ShareWishlistButton itemCount={items.length} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => {
           const product = item.productId;
