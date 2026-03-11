@@ -40,6 +40,8 @@ const OrderSchema = new Schema(
       enum: ['unpaid', 'paid', 'failed'],
       default: 'unpaid',
     },
+    couponCode: { type: String, default: null },
+    discountAmount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

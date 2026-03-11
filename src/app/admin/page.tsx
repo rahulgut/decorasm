@@ -9,6 +9,7 @@ interface Stats {
   totalOrders: number;
   totalUsers: number;
   totalRevenue: number;
+  activeCoupons: number;
   statusCounts: Record<string, number>;
   recentOrders: Array<{
     _id: string;
@@ -49,11 +50,12 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total Products" value={stats.totalProducts.toString()} />
         <StatCard label="Total Orders" value={stats.totalOrders.toString()} />
         <StatCard label="Customers" value={stats.totalUsers.toString()} />
         <StatCard label="Revenue" value={formatPrice(stats.totalRevenue)} />
+        <StatCard label="Active Coupons" value={stats.activeCoupons.toString()} />
       </div>
 
       {/* Order Status Breakdown */}

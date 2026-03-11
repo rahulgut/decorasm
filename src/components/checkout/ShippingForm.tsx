@@ -7,7 +7,11 @@ import { useCart } from '@/hooks/useCart';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 
-export default function ShippingForm() {
+interface ShippingFormProps {
+  couponCode?: string | null;
+}
+
+export default function ShippingForm({ couponCode }: ShippingFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const { refreshCart } = useCart();
@@ -92,7 +96,7 @@ export default function ShippingForm() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shippingAddress: form }),
+        body: JSON.stringify({ shippingAddress: form, ...(couponCode ? { couponCode } : {}) }),
       });
 
       if (!res.ok) {

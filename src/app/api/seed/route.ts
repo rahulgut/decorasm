@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
+import Coupon from '@/lib/models/Coupon';
 import { seedProducts } from '@/lib/seed-data';
 
 const SEED_SECRET = process.env.SEED_SECRET || '';
@@ -45,8 +46,50 @@ export async function POST(request: NextRequest) {
       role: 'admin',
     });
 
+    // Seed coupons (upsert by code)
+    const seedCoupons = [
+      {
+        code: 'SAVE10',
+        discountType: 'percent',
+        discountValue: 10,
+        minOrderAmount: 0,
+        maxUses: 0,
+        maxUsesPerUser: 0,
+        isActive: true,
+      },
+      {
+        code: 'FLAT5',
+        discountType: 'fixed',
+        discountValue: 500, // $5.00 in cents
+        minOrderAmount: 5000, // $50.00 minimum
+        maxUses: 0,
+        maxUsesPerUser: 0,
+        isActive: true,
+      },
+      {
+        code: 'WELCOME20',
+        discountType: 'percent',
+        discountValue: 20,
+        minOrderAmount: 0,
+        maxUses: 0,
+        maxUsesPerUser: 1,
+        isActive: true,
+      },
+    ];
+
+    const couponCodes = seedCoupons.map((c) => c.code);
+    const couponOps = seedCoupons.map((c) => ({
+      updateOne: {
+        filter: { code: c.code },
+        update: { $set: c },
+        upsert: true,
+      },
+    }));
+    await Coupon.bulkWrite(couponOps);
+    await Coupon.deleteMany({ code: { $nin: couponCodes } });
+
     return NextResponse.json({
-      message: `Seeded ${products.length} products and admin user`,
+      message: `Seeded ${products.length} products, ${seedCoupons.length} coupons, and admin user`,
       count: products.length,
     });
   } catch (error) {

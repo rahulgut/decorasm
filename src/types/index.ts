@@ -60,7 +60,25 @@ export interface IOrder {
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
   stripeSessionId?: string;
   paymentStatus?: 'unpaid' | 'paid' | 'failed';
+  couponCode?: string;
+  discountAmount?: number;
   userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ICoupon {
+  _id: string;
+  code: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  minOrderAmount: number;
+  maxUses: number;
+  maxUsesPerUser: number;
+  usageCount: number;
+  usedBy: string[];
+  expiresAt: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

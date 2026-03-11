@@ -5,6 +5,7 @@ import dbConnect from '@/lib/mongodb';
 import Cart from '@/lib/models/Cart';
 import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
+import Coupon from '@/lib/models/Coupon';
 import { auth } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
 
@@ -135,7 +136,42 @@ export async function POST(request: NextRequest) {
       0
     );
     const shipping = subtotal >= 10000 ? 0 : 999;
-    const total = subtotal + shipping;
+
+    // Validate coupon if provided
+    let couponCode: string | null = null;
+    let discountAmount = 0;
+
+    if (body.couponCode && typeof body.couponCode === 'string') {
+      const coupon = await Coupon.findOne({ code: body.couponCode.toUpperCase().trim() });
+
+      if (coupon && coupon.isActive) {
+        const notExpired = !coupon.expiresAt || new Date(coupon.expiresAt) > new Date();
+        const withinMaxUses = coupon.maxUses === 0 || coupon.usageCount < coupon.maxUses;
+        const withinPerUserLimit =
+          coupon.maxUsesPerUser === 0 ||
+          !sessionId ||
+          coupon.usedBy.filter((id: string) => id === sessionId).length < coupon.maxUsesPerUser;
+        const meetsMinimum = subtotal >= coupon.minOrderAmount;
+
+        if (notExpired && withinMaxUses && withinPerUserLimit && meetsMinimum) {
+          couponCode = coupon.code;
+          if (coupon.discountType === 'percent') {
+            discountAmount = Math.round(subtotal * (coupon.discountValue / 100));
+          } else {
+            discountAmount = coupon.discountValue;
+          }
+          discountAmount = Math.min(discountAmount, subtotal);
+
+          // Increment usage
+          await Coupon.findByIdAndUpdate(coupon._id, {
+            $inc: { usageCount: 1 },
+            $push: { usedBy: sessionId },
+          });
+        }
+      }
+    }
+
+    const total = subtotal - discountAmount + shipping;
 
     const orderNumber = generateOrderNumber();
 
@@ -147,6 +183,8 @@ export async function POST(request: NextRequest) {
       subtotal,
       shipping,
       total,
+      couponCode,
+      discountAmount,
       shippingAddress,
       status: 'pending',
       paymentStatus: 'unpaid',
@@ -184,6 +222,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Create a Stripe coupon on-the-fly if a discount was applied
+    let stripeDiscounts: { coupon: string }[] | undefined;
+    if (couponCode && discountAmount > 0) {
+      const stripeCoupon = await stripe.coupons.create({
+        amount_off: discountAmount,
+        currency: 'usd',
+        name: couponCode,
+        duration: 'once',
+      });
+      stripeDiscounts = [{ coupon: stripeCoupon.id }];
+    }
+
     const stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
@@ -193,6 +243,7 @@ export async function POST(request: NextRequest) {
         orderNumber,
         sessionId,
       },
+      ...(stripeDiscounts ? { discounts: stripeDiscounts } : {}),
       success_url: `${origin}/checkout/confirmation?order=${orderNumber}`,
       cancel_url: `${origin}/checkout?cancelled=true`,
     });

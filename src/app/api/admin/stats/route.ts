@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
 import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
+import Coupon from '@/lib/models/Coupon';
 import { requireAdmin } from '@/lib/admin';
 
 export async function GET() {
@@ -11,7 +12,7 @@ export async function GET() {
 
   await dbConnect();
 
-  const [totalProducts, totalOrders, totalUsers, revenueResult, recentOrders, ordersByStatus] =
+  const [totalProducts, totalOrders, totalUsers, revenueResult, recentOrders, ordersByStatus, activeCoupons] =
     await Promise.all([
       Product.countDocuments(),
       Order.countDocuments(),
@@ -22,6 +23,10 @@ export async function GET() {
         .limit(5)
         .lean(),
       Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Coupon.countDocuments({
+        isActive: true,
+        $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+      }),
     ]);
 
   const totalRevenue = revenueResult[0]?.total || 0;
@@ -34,6 +39,7 @@ export async function GET() {
     totalOrders,
     totalUsers,
     totalRevenue,
+    activeCoupons,
     statusCounts,
     recentOrders,
   });

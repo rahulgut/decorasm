@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCart } from '@/hooks/useCart';
 import ShippingForm from '@/components/checkout/ShippingForm';
@@ -11,6 +11,11 @@ function CheckoutContent() {
   const { items, loading } = useCart();
   const searchParams = useSearchParams();
   const cancelled = searchParams.get('cancelled');
+  const [couponCode, setCouponCode] = useState<string | null>(null);
+
+  const handleCouponApplied = (data: { couponCode: string; discountAmount: number } | null) => {
+    setCouponCode(data?.couponCode ?? null);
+  };
 
   if (loading) {
     return (
@@ -46,10 +51,10 @@ function CheckoutContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <ShippingForm />
+          <ShippingForm couponCode={couponCode} />
         </div>
         <div>
-          <OrderSummary />
+          <OrderSummary onCouponApplied={handleCouponApplied} />
         </div>
       </div>
     </div>
